@@ -177,7 +177,6 @@ get_version_in_dir() {
 find_versions() {
   local plugin_name=$1
   local search_path=$2
-
   local version
   version=$(get_version_from_env "$plugin_name")
   if [ -n "$version" ]; then
@@ -310,7 +309,7 @@ parse_asdf_version_file() {
 
   if [ -f "$file_path" ]; then
     local version
-    version=$(strip_tool_version_comments "$file_path" | grep "^${plugin_name} " | sed -e "s/^${plugin_name} //")
+    version=$(strip_tool_version_comments "$file_path" | sed -ne "/^${plugin_name}/ s/^${plugin_name} //gp")
     if [ -n "$version" ]; then
       printf "%s\\n" "$version"
       return 0
@@ -611,11 +610,13 @@ plugin_shims() {
 
 shim_plugin_versions() {
   local executable_name
-  executable_name=$(basename "$1")
+  executable_name="$1"
   local shim_path
   shim_path="$(asdf_data_dir)/shims/${executable_name}"
   if [ -x "$shim_path" ]; then
-    grep "# asdf-plugin: " "$shim_path" 2>/dev/null | sed -e "s/# asdf-plugin: //" | uniq
+    output=$(sed -ne '/^# asdf-plugin:/ s/# asdf-plugin: //gp' "$shim_path" | uniq)
+    printf "$output\\n"
+    printf "%s\\n" $output | head -n 1 | cut -d' ' -f 1 | awk '{print$1" system"}'
   else
     printf "asdf: unknown shim %s\\n" "$executable_name"
     return 1
@@ -624,11 +625,11 @@ shim_plugin_versions() {
 
 shim_plugins() {
   local executable_name
-  executable_name=$(basename "$1")
+  executable_name="$1"
   local shim_path
   shim_path="$(asdf_data_dir)/shims/${executable_name}"
   if [ -x "$shim_path" ]; then
-    grep "# asdf-plugin: " "$shim_path" 2>/dev/null | sed -e "s/# asdf-plugin: //" | cut -d' ' -f 1 | uniq
+    sed -ne '/^# asdf-plugin:/ s/# asdf-plugin: //gp' "$shim_path" | cut -d' ' -f 1 | uniq
   else
     printf "asdf: unknown shim %s\\n" "$executable_name"
     return 1
@@ -663,7 +664,6 @@ asdf_run_hook() {
 get_shim_versions() {
   shim_name=$1
   shim_plugin_versions "${shim_name}"
-  shim_plugin_versions "${shim_name}" | cut -d' ' -f 1 | awk '{print$1" system"}'
 }
 
 preset_versions() {
@@ -692,12 +692,13 @@ select_version() {
   # These are separated by a space. e.g. python 3.7.2 2.7.15
   # For each plugin/version pair, we check if it is present in the shim
   local search_path
-  search_path=$(pwd)
+  search_path=$PWD
   local shim_versions
-  IFS=$'\n' read -rd '' -a shim_versions <<<"$(get_shim_versions "$shim_name")"
-
   local plugins
-  IFS=$'\n' read -rd '' -a plugins <<<"$(shim_plugins "$shim_name")"
+  shim_versions=$(get_shim_versions "$shim_name")
+  plugins=$(printf $shim_versions | cut -d ' ' -f 1 | uniq)
+  IFS=$'\n' read -rd '' -a plugins <<<"$plugins"
+  IFS=$'\n' read -rd '' -a shim_versions <<<"$shim_versions"
 
   for plugin_name in "${plugins[@]}"; do
     local version_and_path
@@ -728,14 +729,12 @@ select_version() {
 
 with_shim_executable() {
   local shim_name
-  shim_name=$(basename "$1")
+  shim_name="$1"
   local shim_exec="${2}"
-
   if [ ! -f "$(asdf_data_dir)/shims/${shim_name}" ]; then
     printf "%s %s %s\\n" "unknown command:" "${shim_name}." "Perhaps you have to reshim?" >&2
     return 1
   fi
-
   local selected_version
   selected_version="$(select_version "$shim_name")"
 

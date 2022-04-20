@@ -2,14 +2,13 @@
 
 shim_exec_command() {
   local shim_name
-  shim_name=$(basename "$1")
+  shim_name=$1
   local shim_args=("${@:2}")
 
   if [ -z "$shim_name" ]; then
     printf "usage: asdf exec <command>\\n"
     exit 1
   fi
-
   exec_shim() {
     local plugin_name="$1"
     local version="$2"
