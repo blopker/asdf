@@ -338,7 +338,7 @@ parse_legacy_version_file() {
 get_preset_version_for() {
   local plugin_name=$1
   local search_path
-  search_path=$(pwd)
+  search_path=$PWD
   local version_and_path
   version_and_path=$(find_versions "$plugin_name" "$search_path")
   local version
@@ -356,7 +356,8 @@ get_asdf_config_value_from_file() {
   fi
 
   local result
-  result=$(grep -E "^\\s*$key\\s*=\\s*" "$config_path" | head | sed -e 's/^[^=]*= *//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+  result=$(grep -E "^\\s*$key\\s*=\\s*" "$config_path" | sed -e 's/^[^=]*= *//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+
   if [ -n "$result" ]; then
     printf "%s\\n" "$result"
     return 0
@@ -372,7 +373,6 @@ get_asdf_config_value() {
 
   local local_config_path
   local_config_path="$(find_file_upwards ".asdfrc")"
-
   get_asdf_config_value_from_file "$local_config_path" "$key" ||
     get_asdf_config_value_from_file "$config_path" "$key" ||
     get_asdf_config_value_from_file "$default_config_path" "$key"
@@ -436,13 +436,13 @@ find_tool_versions() {
 find_file_upwards() {
   local name="$1"
   local search_path
-  search_path=$(pwd)
+  search_path=$PWD
   while [ "$search_path" != "/" ]; do
     if [ -f "$search_path/$name" ]; then
       printf "%s\\n" "${search_path}/$name"
       return 0
     fi
-    search_path=$(dirname "$search_path")
+    search_path="$search_path/.."
   done
 }
 
@@ -652,6 +652,7 @@ asdf_run_hook() {
   local hook_name=$1
   local hook_cmd
   hook_cmd="$(get_asdf_config_value "$hook_name")"
+
   if [ -n "$hook_cmd" ]; then
     asdf_hook_fun() {
       unset asdf_hook_fun
@@ -737,7 +738,6 @@ with_shim_executable() {
   fi
   local selected_version
   selected_version="$(select_version "$shim_name")"
-
   if [ -z "$selected_version" ]; then
     selected_version="$(select_from_preset_version "$shim_name")"
   fi
