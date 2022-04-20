@@ -357,7 +357,6 @@ get_asdf_config_value_from_file() {
 
   local result
   result=$(grep -E "^\\s*$key\\s*=\\s*" "$config_path" | sed -e 's/^[^=]*= *//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-
   if [ -n "$result" ]; then
     printf "%s\\n" "$result"
     return 0
@@ -370,7 +369,6 @@ get_asdf_config_value() {
   local key=$1
   local config_path=${ASDF_CONFIG_FILE:-"$HOME/.asdfrc"}
   local default_config_path=${ASDF_CONFIG_DEFAULT_FILE:-"$(asdf_dir)/defaults"}
-
   local local_config_path
   local_config_path="$(find_file_upwards ".asdfrc")"
   get_asdf_config_value_from_file "$local_config_path" "$key" ||
@@ -442,7 +440,7 @@ find_file_upwards() {
       printf "%s\\n" "${search_path}/$name"
       return 0
     fi
-    search_path="$search_path/.."
+    search_path="$(dirname $search_path)"
   done
 }
 
