@@ -440,7 +440,7 @@ find_file_upwards() {
       printf "%s\\n" "${search_path}/$name"
       return 0
     fi
-    search_path="$(dirname $search_path)"
+    search_path=$(dirname "$search_path")
   done
 }
 
